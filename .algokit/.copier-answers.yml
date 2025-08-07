@@ -1,0 +1,10 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 2.1.6
+_src_path: gh:algorandfoundation/algokit-fullstack-template
+author_email: cordesir@gmail.com
+author_name: Corey Stedman
+cloud_provider: netlify
+contract_name: algofire
+preset_name: production
+project_name: AlgoFire
+
