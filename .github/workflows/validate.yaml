@@ -1,0 +1,14 @@
+name: Pull Request validation
+
+on: [pull_request]
+
+
+jobs:
+  AlgoFire-contracts-ci:
+    name: Run AlgoFire-contracts validation
+    uses: ./.github/workflows/AlgoFire-contracts-ci.yaml
+
+  AlgoFire-frontend-ci:
+    name: Run AlgoFire-frontend validation
+    uses: ./.github/workflows/AlgoFire-frontend-ci.yaml
+

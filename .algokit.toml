@@ -1,0 +1,9 @@
+[algokit]
+min_version = "v2.0.0"
+
+[project]
+type = 'workspace'
+projects_root_path = 'projects'
+
+[project.run]
+build = ['AlgoFire-contracts', 'AlgoFire-frontend']

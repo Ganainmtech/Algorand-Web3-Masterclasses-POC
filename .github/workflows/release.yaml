@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - '.vscode/**'
+      - '.idea/**'
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  AlgoFire-contracts-validate:
+    name: Run AlgoFire-contracts release
+    secrets: inherit
+    uses: ./.github/workflows/AlgoFire-contracts-ci.yaml
+
+  AlgoFire-contracts-release:
+    name: Run AlgoFire-contracts release
+    secrets: inherit
+    uses: ./.github/workflows/AlgoFire-contracts-cd.yaml
+    needs: AlgoFire-contracts-validate
+
+  AlgoFire-frontend-validate:
+    name: Run AlgoFire-frontend release
+    secrets: inherit
+    uses: ./.github/workflows/AlgoFire-frontend-ci.yaml
+
+  AlgoFire-frontend-release:
+    name: Run AlgoFire-frontend release
+    secrets: inherit
+    uses: ./.github/workflows/AlgoFire-frontend-cd.yaml
+    needs: AlgoFire-frontend-validate
