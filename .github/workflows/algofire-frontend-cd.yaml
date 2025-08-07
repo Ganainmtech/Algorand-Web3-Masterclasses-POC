@@ -1,0 +1,36 @@
+name: Release AlgoFire-frontend
+
+on:
+  workflow_call:
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Netlify
+    environment: frontend-prod
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install algokit
+        run: pipx install algokit
+
+      - name: Bootstrap dependencies
+        run: algokit project bootstrap all --project-name 'AlgoFire-frontend'
+    
+      - name: Publish to Netlify
+        env:
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: algokit project run ci-deploy-netlify
+    

@@ -1,0 +1,9 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 1.1.1
+_src_path: gh:algorandfoundation/algokit-react-frontend-template
+author_email: cordesir@gmail.com
+author_name: Corey Stedman
+cloud_provider: netlify
+preset_name: production
+project_name: AlgoFire-frontend
+
