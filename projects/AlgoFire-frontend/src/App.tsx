@@ -71,99 +71,98 @@ function AccountInfo({
   const [copied, setCopied] = React.useState(false)
   const [error, setError] = React.useState(false)
 
-  // Fetch ALGO balance
-  React.useEffect(() => {
+  // Fetch ALGO balance (exposed for manual refresh on click)
+  const fetchBalance = React.useCallback(async () => {
     if (!activeAddress) {
       setBalance(null)
       setError(false)
       return
     }
-    const fetchBalance = async () => {
-      setLoading(true)
-      setError(false)
+    setLoading(true)
+    setError(false)
+    try {
+      const normalizeBase = (base: string) => base.replace(/\/+$/, '')
+      const buildHeaders = (token?: string) => {
+        const headers: Record<string, string> = {}
+        if (token && token.length > 0) headers['X-Algo-API-Token'] = token
+        return headers
+      }
+
+      const endpoints: Record<SelectableNetwork, { indexer: string; algod: string }> = {
+        testnet: {
+          indexer: 'https://testnet-idx.algonode.cloud',
+          algod: 'https://testnet-api.algonode.cloud',
+        },
+        mainnet: {
+          indexer: 'https://mainnet-idx.algonode.cloud',
+          algod: 'https://mainnet-api.algonode.cloud',
+        },
+      }
+
+      // Try Indexer first
       try {
-        // Helper to normalize base server URL and build headers
-        const normalizeBase = (base: string) => base.replace(/\/+$/, '')
-        const buildHeaders = (token?: string) => {
-          const headers: Record<string, string> = {}
-          if (token && token.length > 0) headers['X-Algo-API-Token'] = token
-          return headers
+        const indexerBase = normalizeBase(endpoints[selectedNetwork].indexer)
+        const indexerHeaders = buildHeaders(undefined)
+        const indexerResp = await fetch(`${indexerBase}/v2/accounts/${activeAddress}`, { headers: indexerHeaders })
+        if (indexerResp.ok) {
+          const data = await indexerResp.json()
+          const idxAmount =
+            typeof data?.account?.amount === 'number' ? data.account.amount : typeof data?.amount === 'number' ? data.amount : undefined
+          if (typeof idxAmount === 'number') {
+            setBalance((idxAmount / 1e6).toFixed(3))
+            setLoading(false)
+            return
+          }
         }
+      } catch {}
 
-        // Resolve endpoints for selected network (Algonode defaults)
-        const endpoints: Record<SelectableNetwork, { indexer: string; algod: string }> = {
-          testnet: {
-            indexer: 'https://testnet-idx.algonode.cloud',
-            algod: 'https://testnet-api.algonode.cloud',
-          },
-          mainnet: {
-            indexer: 'https://mainnet-idx.algonode.cloud',
-            algod: 'https://mainnet-api.algonode.cloud',
-          },
+      // Fallback to Algod
+      let fetched = false
+      try {
+        const algodBase = normalizeBase(endpoints[selectedNetwork].algod)
+        const algodHeaders = buildHeaders(undefined)
+        const algodResp = await fetch(`${algodBase}/v2/accounts/${activeAddress}`, { headers: algodHeaders })
+        if (algodResp.ok) {
+          const algodData = await algodResp.json()
+          const algodAmount =
+            typeof algodData?.account?.amount === 'number'
+              ? algodData.account.amount
+              : typeof algodData?.amount === 'number'
+                ? algodData.amount
+                : undefined
+          if (typeof algodAmount === 'number') {
+            setBalance((algodAmount / 1e6).toFixed(3))
+            fetched = true
+          }
         }
+      } catch {}
 
-        // Try Indexer first
+      // Last-resort: public AlgoExplorer indexer when on testnet
+      if (!fetched && selectedNetwork === 'testnet') {
         try {
-          const indexerBase = normalizeBase(endpoints[selectedNetwork].indexer)
-          const indexerHeaders = buildHeaders(undefined)
-          const indexerResp = await fetch(`${indexerBase}/v2/accounts/${activeAddress}`, { headers: indexerHeaders })
-          if (indexerResp.ok) {
-            const data = await indexerResp.json()
-            const idxAmount =
-              typeof data?.account?.amount === 'number' ? data.account.amount : typeof data?.amount === 'number' ? data.amount : undefined
-            if (typeof idxAmount === 'number') {
-              setBalance((idxAmount / 1e6).toFixed(3))
+          const explorerBase = 'https://algoindexer.testnet.algoexplorerapi.io'
+          const resp = await fetch(`${explorerBase}/v2/accounts/${activeAddress}`)
+          if (resp.ok) {
+            const data = await resp.json()
+            const expAmount = typeof data?.account?.amount === 'number' ? data.account.amount : undefined
+            if (typeof expAmount === 'number') {
+              setBalance((expAmount / 1e6).toFixed(3))
               setLoading(false)
               return
             }
           }
         } catch {}
-
-        // Fallback to Algod
-        let fetched = false
-        try {
-          const algodBase = normalizeBase(endpoints[selectedNetwork].algod)
-          const algodHeaders = buildHeaders(undefined)
-          const algodResp = await fetch(`${algodBase}/v2/accounts/${activeAddress}`, { headers: algodHeaders })
-          if (algodResp.ok) {
-            const algodData = await algodResp.json()
-            const algodAmount =
-              typeof algodData?.account?.amount === 'number'
-                ? algodData.account.amount
-                : typeof algodData?.amount === 'number'
-                  ? algodData.amount
-                  : undefined
-            if (typeof algodAmount === 'number') {
-              setBalance((algodAmount / 1e6).toFixed(3))
-              fetched = true
-            }
-          }
-        } catch {}
-
-        // Last-resort: public AlgoExplorer indexer when on testnet
-        if (!fetched && selectedNetwork === 'testnet') {
-          try {
-            const explorerBase = 'https://algoindexer.testnet.algoexplorerapi.io'
-            const resp = await fetch(`${explorerBase}/v2/accounts/${activeAddress}`)
-            if (resp.ok) {
-              const data = await resp.json()
-              const expAmount = typeof data?.account?.amount === 'number' ? data.account.amount : undefined
-              if (typeof expAmount === 'number') {
-                setBalance((expAmount / 1e6).toFixed(3))
-                setLoading(false)
-                return
-              }
-            }
-          } catch {}
-        }
-      } catch (e) {
-        setBalance(null)
-        setError(true)
       }
-      setLoading(false)
+    } catch (e) {
+      setBalance(null)
+      setError(true)
     }
-    fetchBalance()
+    setLoading(false)
   }, [activeAddress, selectedNetwork])
+
+  React.useEffect(() => {
+    fetchBalance()
+  }, [fetchBalance])
 
   // Fetch ALGO price
   React.useEffect(() => {
@@ -203,6 +202,11 @@ function AccountInfo({
 
   if (!activeAddress) return null
   const usdValue = balance && algoPrice ? (parseFloat(balance) * algoPrice).toFixed(2) : null
+  const usdDisplay = React.useMemo(() => {
+    if (!usdValue) return null
+    const cleaned = String(usdValue).replace(/^\$+/, '')
+    return `$${cleaned}`
+  }, [usdValue])
   const explorerBase =
     selectedNetwork === 'testnet' ? 'https://testnet.explorer.perawallet.app/address' : 'https://explorer.perawallet.app/address'
   return (
@@ -252,9 +256,19 @@ function AccountInfo({
       </span>
       <span className="text-gray-700 text-lg min-h-[1.5em] flex items-center">
         {loading ? <span className="loading loading-spinner loading-xs mr-2" /> : null}
-        {!loading && !error && balance ? `${balance} ALGO` : null}
+        {!loading && !error && balance ? (
+          <button
+            type="button"
+            className="text-left text-gray-700 text-lg cursor-pointer hover:opacity-90"
+            onClick={fetchBalance}
+            title="Click to refresh balance"
+            disabled={loading}
+          >
+            {balance} ALGO
+          </button>
+        ) : null}
         {!loading && error ? 'N/A' : null}
-        {!loading && !error && usdValue ? <span className="ml-2 text-gray-500 text-sm">($${usdValue} USD)</span> : null}
+        {!loading && !error && usdDisplay ? <span className="ml-2 text-gray-500 text-sm">({usdDisplay} USD)</span> : null}
         {selectedNetwork === 'testnet' && (
           <a
             href="https://bank.testnet.algorand.network/"
