@@ -1,6 +1,7 @@
 import { SupportedWallet, useWallet, WalletId, WalletManager, WalletProvider } from '@txnlab/use-wallet-react'
 import { SnackbarProvider } from 'notistack'
 import React, { useEffect, useState } from 'react'
+import AddressQRModal from './components/AddressQRModal'
 import Home from './Home'
 import { ellipseAddress } from './utils/ellipseAddress'
 import { getAlgodConfigFromViteEnvironment, getKmdConfigFromViteEnvironment } from './utils/network/getAlgoClientConfigs'
@@ -70,6 +71,7 @@ function AccountInfo({
   const [algoPrice, setAlgoPrice] = React.useState<number | null>(null)
   const [copied, setCopied] = React.useState(false)
   const [error, setError] = React.useState(false)
+  const [qrOpen, setQrOpen] = React.useState(false)
 
   // Fetch ALGO balance (exposed for manual refresh on click)
   const fetchBalance = React.useCallback(async () => {
@@ -188,6 +190,9 @@ function AccountInfo({
     }
   }
 
+  const openQR = () => setQrOpen(true)
+  const closeQR = () => setQrOpen(false)
+
   const handleDisconnect = async () => {
     if (wallets) {
       const activeWallet = wallets.find((w) => w.isActive)
@@ -231,6 +236,11 @@ function AccountInfo({
         </button>
       </div>
       <span className="flex items-center text-gray-700 text-sm mb-1">
+        <button className="mr-2 p-1 rounded hover:bg-gray-200" onClick={openQR} title="Show address QR code">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm6-2h2v4h4V3h2v6h-8V3zm8 8h-6v2h2v2h2v-2h2v-2zm0 4h-2v2h-2v2h4v-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5z" />
+          </svg>
+        </button>
         <a href={`${explorerBase}/${activeAddress}`} target="_blank" rel="noreferrer" title={activeAddress} className="hover:underline">
           {ellipseAddress(activeAddress, 7)}
         </a>
@@ -254,6 +264,16 @@ function AccountInfo({
           )}
         </button>
       </span>
+      <AddressQRModal
+        open={qrOpen}
+        onClose={closeQR}
+        address={activeAddress}
+        balanceAlgos={balance ?? undefined}
+        balanceUsd={usdDisplay ?? undefined}
+        networkLabel={selectedNetwork === 'mainnet' ? 'Mainnet' : 'Testnet'}
+        onRefreshBalance={fetchBalance}
+        loading={loading}
+      />
       <span className="text-gray-700 text-lg min-h-[1.5em] flex items-center">
         {loading ? <span className="loading loading-spinner loading-xs mr-2" /> : null}
         {!loading && !error && balance ? (
